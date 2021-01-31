@@ -3,7 +3,7 @@ import socket
 import pickle
 import random
 import time
-from network.utils import print_msg
+from utils import print_msg
 #from data.train as nntrain
 
 
@@ -34,8 +34,8 @@ class Client:
 
             # Generate new number
             # nntrain.main()
-            #num = self.num_gen(data_rcv)
-            num = 5
+            num = self.num_gen(data_rcv)
+            #num = 5
             time.sleep(5)
             print_msg("Sent data: " + str(num))
 

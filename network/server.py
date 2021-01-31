@@ -2,7 +2,7 @@ import sys
 import socket
 import threading
 import pickle
-from network.utils import print_msg
+from utils import print_msg
 
 
 class Server:
@@ -52,8 +52,8 @@ class Server:
                         self.sum += number[0]*number[1]
 
                         # Calculate avg
-                        print(self.sum)
-                        print(self.n_client)
+                        # print(self.sum)
+                        # print(self.n_client)
                         self.avg = self.sum / self.n_client
 
                         # Reflect the change in sum and average

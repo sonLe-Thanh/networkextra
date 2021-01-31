@@ -2,7 +2,7 @@ import sys
 import socket
 import threading
 import pickle
-from network.utils import print_msg
+from utils import print_msg
 
 
 class InternalServer:
