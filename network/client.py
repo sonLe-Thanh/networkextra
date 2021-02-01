@@ -1,4 +1,7 @@
 import sys
+sys.path.append("/Users/thanhsom/Downloads/computer_network_extra/model")
+import train
+
 import socket
 import pickle
 import random
@@ -34,6 +37,10 @@ class Client:
 
             # Generate new number
             # nntrain.main()
+
+            #Start training
+            train.train_caller(1, 1, 0, 1, 0.01)
+
             num = self.num_gen(data_rcv)
             #num = 5
             time.sleep(5)
