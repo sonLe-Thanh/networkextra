@@ -2,6 +2,8 @@ import sys
 import socket
 import threading
 import pickle
+import time
+
 from utils import print_msg
 CHUNKSIZE = 9000000
 
@@ -32,7 +34,7 @@ class InternalServer:
                 #data_rcv = pickle.loads(client_conn.recv(1024))
                 # data_rcv = client_conn.recv(1024)
                 print_msg("Received from " + client_ip)
-
+                iter =0
                 with open("trained/internal/from_clients/"+client_ip+".pt", "wb") as file:
                     while True:
                         data = client_conn.recv(CHUNKSIZE)
@@ -42,8 +44,12 @@ class InternalServer:
                         if data == "close":
                             self.remove_client(client_conn, client_ip)
                             return
+                        iter += 1
+                        print_msg("Complete receiving file from " + str(client_ip))
 
-                    #file.close()
+                    self.send_to_upper_server([1, 1])
+                print("kkk")
+                file.close()
 
                 print_msg("Complete receiving file from "+str(client_ip))
 
