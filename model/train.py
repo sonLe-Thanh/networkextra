@@ -6,7 +6,7 @@ import torch.multiprocessing as mp
 import torch.nn as nn
 import torch.optim as optim
 import argparse
-from model.model import NeuralNet
+from model import NeuralNet
 import torchvision
 import torchvision.transforms as transforms
 
@@ -33,6 +33,20 @@ firebase = firebase.FirebaseApplication(
 url = "http://localhost:9000/log/create"
 
 
+def train_caller(nodes, cpus, nr, epochs, scale, type, address):
+    parser = argparse.ArgumentParser()
+    args = parser.parse_args()
+    args.nodes = nodes
+    args.cpus = cpus
+    args.nr = nr
+    args.epochs = epochs
+    args.world_size = args.cpus * args.nodes
+    args.scale = scale
+    args.type = type
+    args.address = address
+    mp.spawn(train, nprocs=args.cpus, args=(args,))
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--nodes', default=1, type=int, metavar='N',
@@ -45,9 +59,8 @@ def main():
                         help='number of total epochs to run')
     args = parser.parse_args()
     args.world_size = args.cpus * args.nodes
+    args.scale = 0.01
     mp.spawn(train, nprocs=args.cpus, args=(args,))
-    # args = AttrDict({'nodes': 1, 'cpus': 1, 'nr': 0,
-    #                  'epochs': 1, 'world_size': 1})
 
 
 def train(cpu, args):
@@ -76,8 +89,13 @@ def train(cpu, args):
         root='./data',
         train=True,
         transform=transforms.ToTensor(),
-        download=True)
+        download=True,
+    )
 
+    train_size = int(args.scale * len(train_dataset))
+    test_size = len(train_dataset) - train_size
+
+    train_dataset = torch.utils.data.random_split(train_dataset, [train_size, test_size])[0]
     # Sampling the dataset to avoid same inputs order:
     train_sampler = torch.utils.data.distributed.DistributedSampler(
         train_dataset,
@@ -95,6 +113,8 @@ def train(cpu, args):
     start = datetime.now()
     total_step = len(train_loader)
     lossVal = []
+    scale = 10
+    print(args.epochs)
     for epoch in range(args.epochs):
         for i, (images, labels) in enumerate(train_loader):
             # Forward pass:
@@ -107,20 +127,14 @@ def train(cpu, args):
             optimizer.step()
             # For logging:
             if (i + 1) % batch_size and cpu == 0:
-                # print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'.format
-                #      (epoch + 1, args.epochs, i + 1, total_step, loss.item()))
-                # lossValue = loss.item()
-                # lossVal.append(lossValue)
-                # result = firebase.post('/lossdata', lossValue)
-                # print(result)
-                myobj = {'data': loss.item()}
+                print('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'.format
+                      (epoch + 1, args.epochs, i + 1, total_step, loss.item()))
 
-                x = requests.post(url, data=myobj)
-                # print(x)
-
-    # result = firebase.post('/lossdata', lossVal)
     if cpu == 0:
         print("Training completed in: " + str(datetime.now() - start))
+
+    PATH = "trained/"+args.type+"/"+args.address+".pt"
+    torch.save(model, PATH)
 
 
 if __name__ == "__main__":
