@@ -9,6 +9,7 @@ import time
 from utils import print_msg
 #from data.train as nntrain
 
+CHUNKSIZE = 9000000
 
 class Client:
     def __init__(
@@ -24,6 +25,7 @@ class Client:
         self.num_gen = num_gen
 
         self.set_up()
+        self.trained = False
 
     def __del__(self):
         self.shut_down()
@@ -39,16 +41,32 @@ class Client:
             # nntrain.main()
 
             #Start training
-            train.train_caller(1, 1, 0, 1, 0.01)
+            if not self.trained:
+                type = "clients"
+                home_ip = self.server.getsockname()[0]
+                home_port = self.server.getsockname()[1]
+                home_address = str(home_ip) + ":" + str(home_port)
 
-            num = self.num_gen(data_rcv)
-            #num = 5
-            time.sleep(5)
-            print_msg("Sent data: " + str(num))
+                train.train_caller(1, 1, 0, 1, 0.01, type, home_address)
+
+                # Trained completed, send data to upper layers
+                print_msg("Ready to send file")
+                file_name = home_address + ".pt"
+                path = "trained/"+type+"/"+file_name
+                file_to_send = open(path, "rb")
+                data = file_to_send.read(CHUNKSIZE)
+
+                # data_to_send = pickle.dumps(data)
+                self.server.sendall(data)
+
+            # num = self.num_gen(data_rcv)
+            # num = 5
+            # time.sleep(5)
+            # print_msg("Sent data: " + str(num))
 
             # Send number back to server
-            data_to_send = pickle.dumps(num)
-            self.server.send(data_to_send)
+            # data_to_send = pickle.dumps(num)
+            # self.server.send(data_to_send)
 
     def set_up(self):
         """Set up connection with server"""

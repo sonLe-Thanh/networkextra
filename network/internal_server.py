@@ -3,7 +3,7 @@ import socket
 import threading
 import pickle
 from utils import print_msg
-
+CHUNKSIZE = 9000000
 
 class InternalServer:
     def __init__(self, upper_server_ip, upper_server_port, port):
@@ -29,41 +29,56 @@ class InternalServer:
         """Handle request from clients."""
         while True:
             try:
-                data_rcv = pickle.loads(client_conn.recv(1024))
-                print_msg("Received from " + client_ip + " " + str(data_rcv))
+                #data_rcv = pickle.loads(client_conn.recv(1024))
+                # data_rcv = client_conn.recv(1024)
+                print_msg("Received from " + client_ip)
 
-                number = data_rcv
-                if number == "close":
-                    self.remove_client(client_conn, client_ip)
-                    return
+                with open("trained/internal/from_clients/"+client_ip+".pt", "wb") as file:
+                    while True:
+                        data = client_conn.recv(CHUNKSIZE)
+                        if not data:
+                            break
+                        file.write(data)
+                        if data == "close":
+                            self.remove_client(client_conn, client_ip)
+                            return
 
-                if number:
-                    # !!! Critical section
-                    # Ok solely due to the module architecture
-                    with self._key_lock:
+                    #file.close()
 
-                        # Add number to db
-                        old_number = self.client_conns[client_ip][1]
-                        self.client_conns[client_ip][1] = number
+                print_msg("Complete receiving file from "+str(client_ip))
 
-                        # Add number client sent to sum
-                        self.sum -= old_number
-                        self.sum += number
-
-                        # Calculate avg
-                        self.avg = self.sum / self.n_element
-
-                        # Reflect the change in sum and average
-                        print_msg("Current sum: " + str(self.sum))
-                        print_msg("Current average: " + str(self.avg))
-                        print_msg("Current number of clients: " + str(self.n_element))
-                        print_msg("------------------------------------")
-
-                        # Calculate and send back to upper server
-                        self.send_to_upper_server([self.avg, self.n_element])
-                else:
-                    self.remove_client(client_conn, client_ip)
-                    return
+                # number = data_rcv
+                # if number == "close":
+                #     self.remove_client(client_conn, client_ip)
+                #     return
+                #
+                # if number:
+                #     # !!! Critical section
+                #     # Ok solely due to the module architecture
+                #     with self._key_lock:
+                #
+                #         # Add number to db
+                #         old_number = self.client_conns[client_ip][1]
+                #         self.client_conns[client_ip][1] = number
+                #
+                #         # Add number client sent to sum
+                #         self.sum -= old_number
+                #         self.sum += number
+                #
+                #         # Calculate avg
+                #         self.avg = self.sum / self.n_element
+                #
+                #         # Reflect the change in sum and average
+                #         print_msg("Current sum: " + str(self.sum))
+                #         print_msg("Current average: " + str(self.avg))
+                #         print_msg("Current number of clients: " + str(self.n_element))
+                #         print_msg("------------------------------------")
+                #
+                #         # Calculate and send back to upper server
+                #         self.send_to_upper_server([self.avg, self.n_element])
+                # else:
+                #     self.remove_client(client_conn, client_ip)
+                #     return
             except (ConnectionError):
                 self.remove_client(client_conn, client_ip)
                 return
